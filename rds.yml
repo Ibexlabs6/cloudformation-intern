@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'rds'
+Description: 'template for rds launch'
 
 Parameters:
   cidr:
