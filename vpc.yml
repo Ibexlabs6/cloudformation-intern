@@ -1,0 +1,156 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'cloudformation template for creating vpc'
+Resources:
+ myVPC:
+  Type: AWS::EC2::VPC
+  Properties:
+    CidrBlock: 10.0.0.0/16
+    EnableDnsSupport: true
+    Tags:
+      - Key: Name
+        Value: myvpc
+#creating subnets 
+ ibexpubsub1:
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: us-east-1a
+    VpcId: !Ref myVPC
+    CidrBlock: 10.0.0.0/22
+    Tags:
+      - Key: Name
+        Value: ibex-pub-sub1         
+ ibexpubsub2:
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: us-east-1b
+    VpcId: !Ref myVPC
+    CidrBlock: 10.0.4.0/22
+    Tags:
+      - Key: Name
+        Value: ibex-pub-sub2
+ ibexprivsub1:
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: us-east-1c
+    VpcId: !Ref myVPC
+    CidrBlock: 10.0.8.0/21	
+    Tags:
+      - Key: Name
+        Value: ibex-priv-sub1
+ ibexprivsub2:
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: us-east-1d
+    VpcId: !Ref myVPC
+    CidrBlock: 10.0.16.0/20
+    Tags:
+      - Key: Name
+        Value: ibex-priv-sub2
+#creating a route tables
+ privateroutetable:
+  Type: AWS::EC2::RouteTable
+  Properties:
+    VpcId: !Ref myVPC
+    Tags:
+      - Key: keyname
+        Value: value
+ publicroutetable:
+  Type: AWS::EC2::RouteTable
+  Properties:
+    VpcId: !Ref myVPC
+    Tags:
+      - Key: keyname
+        Value: value
+#making route table assosiation
+ publicrouteTableAssocName1:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Properties:
+    SubnetId: !Ref ibexpubsub1 
+    RouteTableId: !Ref publicroutetable
+ publicrouteTableAssocName2:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Properties:
+    SubnetId: !Ref ibexpubsub2
+    RouteTableId: !Ref publicroutetable
+ privaterouteTableAssocName1:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Properties:
+    SubnetId: !Ref ibexprivsub1
+    RouteTableId: !Ref privateroutetable
+ privaterouteTableAssocName2:
+  Type: AWS::EC2::SubnetRouteTableAssociation
+  Properties:
+    SubnetId: !Ref ibexprivsub2
+    RouteTableId: !Ref privateroutetable
+#creating IGW
+ igw:
+  Type: AWS::EC2::InternetGateway
+  Properties:
+    Tags:
+      - Key: Name 
+        Value: igw
+ AttachGateway:
+  Type: AWS::EC2::VPCGatewayAttachment
+  Properties:
+    VpcId: !Ref myVPC
+    InternetGatewayId: !Ref igw
+#attaching a IGW
+ igwrouteName:
+   Type: AWS::EC2::Route
+   Properties:
+     RouteTableId: !Ref publicroutetable
+     DestinationCidrBlock: 0.0.0.0/0
+     GatewayId: !Ref igw
+#creating Elastic IP for NAT gateway 
+ eip:
+  Type: "AWS::EC2::EIP"
+  Properties:
+   Domain: vpc
+#creating NAT gateway
+ natgateway:
+  Type: "AWS::EC2::NatGateway"
+  Properties:
+    AllocationId: !GetAtt 'eip.AllocationId'
+    SubnetId: !Ref ibexpubsub1 #required
+#attaching NAT gateway
+ NATrouteName:
+   Type: AWS::EC2::Route
+   Properties:
+     RouteTableId: !Ref privateroutetable
+     DestinationCidrBlock: 0.0.0.0/0
+     NatGatewayId: !Ref natgateway
+#creating network acl for publicsubnet
+ NaclId:
+   Type: "AWS::EC2::NetworkAcl"
+   Properties:
+     VpcId: !Ref myVPC #required
+ Naclassosiationpub:
+   Type: "AWS::EC2::NetworkAclEntry"
+   Properties:
+     CidrBlock: 0.0.0.0/0 #required
+     Egress: 'true'
+     NetworkAclId: !Ref NaclId #required   
+     Protocol: '-1' #required
+     RuleAction: allow #required
+     RuleNumber: '100' #required
+ LogicalID:
+   Type: "AWS::EC2::SubnetNetworkAclAssociation"
+   Properties:
+     NetworkAclId: !Ref NaclId #required
+     SubnetId: !Ref ibexprivsub1  #required
+ LogicalID:
+   Type: "AWS::EC2::SubnetNetworkAclAssociation"
+   Properties:
+     NetworkAclId: !Ref NaclId #required
+     SubnetId: !Ref ibexprivsub2 #required
+ LogicalID:
+   Type: "AWS::EC2::SubnetNetworkAclAssociation"
+   Properties:
+     NetworkAclId: !Ref NaclId #required
+     SubnetId: !Ref ibexpubsub1  #required
+ LogicalID:
+   Type: "AWS::EC2::SubnetNetworkAclAssociation"
+   Properties:
+     NetworkAclId: !Ref NaclId #required
+     SubnetId: !Ref ibexpubsub2 #required    
