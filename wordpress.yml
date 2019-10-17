@@ -1,0 +1,462 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Wordpress stack'
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"  
+  subnetCount:
+    Type: String
+    Default: "8"  
+  maskSizeForIPv4:
+    Type: String
+    Default: "8"
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+  KeyPair:
+    Description: Select Key pair
+    Type: AWS::EC2::KeyPair::KeyName     
+  DBName:
+    Default: MyDatabase
+    Description: The database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.    
+  DBUser:
+    NoEcho: 'true'
+    Description: The database admin account username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16' 
+  DBPassword:
+    NoEcho: 'true'
+    Description: The database admin account password
+    Type: String
+    MinLength: '1'
+    MaxLength: '41'
+  DBAllocatedStorage:
+    Default: '5'
+    Description: The size of the database (Gb)
+    Type: Number
+    MinValue: '5'
+    MaxValue: '1024'
+    ConstraintDescription: must be between 5 and 1024Gb.
+  DBInstanceClass:
+    Description: The database instance type
+    Type: String
+    Default: db.t2.small
+    AllowedValues: [db.t1.micro, db.m1.small, db.m1.medium, db.m1.large, db.m1.xlarge,
+      db.m2.xlarge, db.m2.2xlarge, db.m2.4xlarge, db.m3.medium, db.m3.large, db.m3.xlarge,
+      db.m3.2xlarge, db.m4.large, db.m4.xlarge, db.m4.2xlarge, db.m4.4xlarge, db.m4.10xlarge,
+      db.r3.large, db.r3.xlarge, db.r3.2xlarge, db.r3.4xlarge, db.r3.8xlarge, db.m2.xlarge,
+      db.m2.2xlarge, db.m2.4xlarge, db.cr1.8xlarge, db.t2.micro, db.t2.small, db.t2.medium,
+      db.t2.large]
+    ConstraintDescription: must select a valid database instance type.  
+Resources:
+#creating a vpc
+ myVPC:
+   Type: AWS::EC2::VPC
+   Properties:
+     CidrBlock: !Ref VpcCidr
+     EnableDnsSupport: true
+     EnableDnsHostnames: true
+     Tags:
+       - Key: Name
+         Value: Ibex-Dev-Vpc
+#creating a igw and attaching to Testvpc
+ VpcIgw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Ibex-Dev-Igw
+ AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref VpcIgw         
+#creating subnets
+ pubsubnet1:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 0
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-pub-sub1
+ pubsubnet2:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 1
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-pub-sub2
+ pubsubnet3:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 0
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [2, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-pub-sub3 
+ pubsubnet4:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 1
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [3, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-pub-sub4        
+ privsubnet1:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 0
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [4, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-priv-sub1
+ privsubnet2:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 1
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [5, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-priv-sub2
+ privsubnet3:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 0
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [6, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-priv-sub3
+ privsubnet4:
+   Type: AWS::EC2::Subnet
+   Properties:
+     AvailabilityZone: !Select
+       - 1
+       - !GetAZs ""
+     MapPublicIpOnLaunch: true
+     VpcId: !Ref myVPC
+     CidrBlock: !Select [7, !Cidr [!Ref VpcCidr, !Ref subnetCount, !Ref maskSizeForIPv4]]
+     Tags:
+       - Key: Name
+         Value: Ibex-priv-sub4     
+ 
+ 
+#Creating EIP for NAT Gateway
+ eipTest:
+    Type: AWS::EC2::EIP
+    Properties:
+     Domain: vpc
+#Creating Natgateway
+ testNat:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt 'eipTest.AllocationId'
+      SubnetId: !Ref pubsubnet1
+      Tags: 
+        - Key: Name
+          Value: Ibex-Dev-Natgateway
+ PublicRt:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Name
+          Value: Ibex-Dev-PublicRt 
+ PrivateRt:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Name
+          Value: Ibex-Dev-PrivateRt 
+#Enabling IGW and Natgateway routes
+ Publicroutes:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRt
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref VpcIgw 
+ Privateroutes:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRt
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref testNat 
+#route table association      
+ PublicARouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet1
+      RouteTableId: !Ref PublicRt  
+ PublicBRouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet2
+      RouteTableId: !Ref PublicRt 
+ PublicCRouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet3
+      RouteTableId: !Ref PublicRt
+ PublicDRouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet4
+      RouteTableId: !Ref PublicRt     
+ PrivateARouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref  privsubnet1
+      RouteTableId: !Ref PrivateRt
+ PrivateBRouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet2
+      RouteTableId: !Ref PrivateRt 
+ PrivateCRouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref  privsubnet3
+      RouteTableId: !Ref PrivateRt 
+ PrivateDRouteSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref  privsubnet4
+      RouteTableId: !Ref PrivateRt     
+#Rds creation
+ rdsDBSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: TThese is for MySQL db Subnet Group
+        SubnetIds:
+          - !Ref pubsubnet1
+          - !Ref pubsubnet2 
+        Tags:
+         - Key: Name
+           Value: Ibex-Dev-SubnetGroup
+ RdsSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Security Group for EC2 to allow SSH from Bastion and expose HTTP 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref myVPC
+      Tags:
+       - Key: Name
+         Value: Ibex-Dev-DbSg 
+ MasterDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref 'DBName'
+      AllocatedStorage: !Ref 'DBAllocatedStorage'
+      DBInstanceClass: !Ref 'DBInstanceClass'
+      DBSubnetGroupName: !Ref rdsDBSubnetGroup
+      Engine: MySQL
+      EngineVersion: "5.7"
+      MasterUsername: !Ref 'DBUser'
+      MasterUserPassword: !Ref 'DBPassword'
+      VPCSecurityGroups: 
+         - !Ref RdsSecurityGroup
+      Tags:
+       - Key: Name
+         Value: Ibex-Dev-WP-DB
+
+#Wordpress server creation
+ MyEC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      ImageId:  ami-0cb0e70f44e1a4bb5
+      SubnetId: !Ref pubsubnet2
+      SecurityGroupIds:
+        - Ref: MySecurityGroup
+      UserData: 
+        "Fn::Base64":
+          !Sub |
+          #!/bin/bash
+          sudo -i
+          yum update -y
+          touch /opt/efs.sh
+          printf '#cloud-config
+                  repo_update: true
+                  repo_upgrade: all
+
+                  packages:
+                  - amazon-efs-utils
+
+                  runcmd:
+                  - mkdir -p /efs
+                  - echo "$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone).${FileSystem}:/ /efs efs defaults 0 0" >> /etc/fstab
+                  - mount -a -t efs defaults\n' > /opt/efs.sh
+
+          yum install httpd mysql php-mysql php -y
+          chkconfig httpd on 
+          service httpd start
+          cd /var/www/html
+          wget https://wordpress.org/wordpress-5.0.6.tar.gz
+          tar -xvzf wordpress-5.0.6.tar.gz
+          touch wp-config.php
+          cd /var/www/html/wordpress/
+          cp wp-config-sample.php wp-config.php
+          ex -s -c '%s/database_name_here/${DBName}/g|x' wp-config.php
+          ex -s -c '%s/localhost/${MasterDB.Endpoint.Address}/g|x' wp-config.php
+          ex -s -c '%s/username_here/${DBUser}/g|x' wp-config.php
+          ex -s -c '%s/password_here/${DBPassword}/g|x' wp-config.php
+          mv /var/www/html/wordpress/* /var/www/html  
+          service httpd restart
+      Tags:
+        - Key: Name
+          Value: Ibex-Dev-WPserver 
+  
+ MySecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Security Group for EC2 to allow SSH from Bastion and expose HTTP 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22   
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref myVPC
+      Tags:
+       - Key: Name
+         Value: Ibex-Dev-WpSg     
+
+#Loadbalncer          
+ LoadBalancerSG: 
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Load balancer security group"
+      VpcId: !Ref myVPC      
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          ToPort: 80
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: 443
+          ToPort: 443  
+
+ MyAlb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Type: application
+      SecurityGroups: 
+        - !Ref LoadBalancerSG
+      Subnets: 
+        - !Ref  pubsubnet1
+        - !Ref  pubsubnet4
+      Tags:
+        - Key: Name
+          Value: Ibex-Dev-ALB
+
+ MyAlbListners:
+     Type: AWS::ElasticLoadBalancingV2::Listener
+     Properties: 
+       LoadBalancerArn: !Ref MyAlb
+       DefaultActions:
+         - Type: "forward"
+           TargetGroupArn: !Ref TargetGroup 
+       Port: 80
+       Protocol: HTTP
+    
+ TargetGroup:
+     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+     Properties:
+       Protocol: HTTP
+       Port: 80
+       HealthCheckPath: /
+       HealthCheckIntervalSeconds: 10
+       HealthCheckTimeoutSeconds: 5
+       HealthyThresholdCount: 2
+       UnhealthyThresholdCount: 2
+       Port: 80
+       Protocol: HTTP
+       Targets:
+         - Id: !Ref MyEC2Instance
+       VpcId: !Ref myVPC                    
+
+ MountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: myVPC
+      GroupDescription: Security group for mount target
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: 0.0.0.0/0 
+ FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+      - Key: Name
+        Value: Ibex-Dev-EFS 
+ MountTarget:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId: !Ref pubsubnet2
+      SecurityGroups:
+       - Ref: MountTargetSecurityGroup
+                         
+  
+           
