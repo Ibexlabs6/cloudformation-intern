@@ -1,0 +1,242 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'vpc with 6-privae & 3-public subnets'
+
+Parameters:
+
+  pemkey:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: select your pem key
+  cidr:
+    Type: String
+    Default: 10.0.0.0/16
+  subnetcount:
+    Type: String
+    Default: "9" 
+  subnetmask:
+    Type: String
+    Default: "8"
+Resources:
+#creating a vpc
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref cidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-VPC
+#creating subnets
+  pubsubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [0, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PubSub1
+  pubsubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true  
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [1, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PubSub2
+  pubsubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 2
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true  
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [2, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PubSub3        
+  privsubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [3, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PrivSub1
+  privsubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [4, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PrivSub2
+  privsubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 2
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [5, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PrivSub3
+  privsubnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 3
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [6, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PrivSub4                
+  privsubnet5:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 4
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [7, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PrivSub5
+  privsubnet6:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - 5
+        - !GetAZs ""
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref myVPC
+      CidrBlock: !Select [8, !Cidr [!Ref cidr, !Ref subnetcount, !Ref subnetmask]]
+      Tags:
+        - Key: Name
+          Value: Saga-Dev-PrivSub6
+
+
+
+#creating route tables
+
+  publicrouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Name
+          Value: Kawasaki-PublicrouteTable
+  privaterouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: Name
+          Value: Kawasaki-PrivaterouteTable
+#creating route table association
+  pubrouteTableAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet1
+      RouteTableId: !Ref publicrouteTable
+  pubrouteTableAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet2
+      RouteTableId: !Ref publicrouteTable
+  pubrouteTableAssoc3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref pubsubnet3
+      RouteTableId: !Ref publicrouteTable    
+  privrouteTableAssoc1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet1
+      RouteTableId: !Ref privaterouteTable
+  privrouteTableAssoc2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet2
+      RouteTableId: !Ref privaterouteTable
+  privrouteTableAssoc3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet3
+      RouteTableId: !Ref privaterouteTable
+  privrouteTableAssoc4:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet4
+      RouteTableId: !Ref privaterouteTable        
+  privrouteTableAssoc5:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet5
+      RouteTableId: !Ref privaterouteTable
+  privrouteTableAssoc6:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref privsubnet6
+      RouteTableId: !Ref privaterouteTable    
+#creating an internet gateway
+  igwName:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: igw-saga
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref igwName 
+#attaching igw
+  igwroute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref publicrouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref igwName
+#creating Eip gateway
+  eip:
+    Type: AWS::EC2::EIP
+    Properties:
+     Domain: !Ref myVPC
+#creating nat gateway
+  natID:
+    Type: "AWS::EC2::NatGateway"
+    Properties:
+      AllocationId: !GetAtt 'eip.AllocationId' #required
+      SubnetId: !Ref pubsubnet1 #required
+#attacing nat gateway
+  natroute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref privaterouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref natID
+  
+

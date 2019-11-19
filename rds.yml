@@ -1,0 +1,53 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'rds'
+
+Parameters:
+  securitygroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: selsect same vpc securtiy group 
+  masterpass:
+    Type: string
+    Description: enter password for admin 
+  adminName:
+    Type: string
+    Description: enter the admin name
+
+
+Resources:
+  DBID:
+    Type: "AWS::RDS::DBInstance"
+    Properties: 
+      DBInstanceClass: db.m1 #required
+      DBName: MySQL
+      DBSecurityGroups:
+        - !Ref DBsecGroupName
+      Engine: MySQL
+      EngineVersion: 10.3.13 
+      MasterUserPassword: !Ref masterpass
+      MasterUsername: !Ref adminName
+      MultiAZ: true
+      PubliclyAccessible: false
+      VPCSecurityGroups:
+        - !Ref securitygroup  
+  
+  #creating security group for rds
+  DBsecGroupName:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: 
+      GroupDescription: 
+      VpcId:
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          CidrIp: 0.0.0.0/0 
+
+      Tags:
+        - Key: Name
+          Value: Kawasaki-RDS
